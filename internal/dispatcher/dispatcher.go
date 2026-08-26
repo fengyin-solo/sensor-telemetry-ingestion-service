@@ -9,11 +9,16 @@ import (
 
 type Dispatcher struct{ workers sync.WaitGroup }
 
+// Start launches a worker that runs operation under the supplied ctx.
+// The ctx drives the worker's lifetime: when the request is cancelled (for
+// example after a timeout) the worker stops retrying instead of looping
+// forever, and Shutdown is not held up by background work that can no longer
+// succeed. context.Background() is deliberately not used here.
 func (d *Dispatcher) Start(ctx context.Context, operation func(context.Context) error) {
 	d.workers.Add(1)
 	go func() {
 		defer d.workers.Done()
-		scheduler.Run(context.Background(), operation)
+		scheduler.Run(ctx, operation)
 	}()
 }
 
