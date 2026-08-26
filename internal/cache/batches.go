@@ -1,0 +1,22 @@
+package cache
+
+import "sync"
+
+type Batches struct {
+	mu     sync.Mutex
+	values map[string][]byte
+}
+
+func NewBatches() *Batches { return &Batches{values: make(map[string][]byte)} }
+
+func (b *Batches) Put(id string, payload []byte) {
+	b.mu.Lock()
+	b.values[id] = payload
+	b.mu.Unlock()
+}
+
+func (b *Batches) Get(id string) []byte {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.values[id]
+}
