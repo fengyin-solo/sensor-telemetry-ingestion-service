@@ -16,12 +16,17 @@ type Service struct {
 }
 
 func (s Service) Deliver(sensorID string) error {
+	// Commit the event exactly once. Re-entering the publish phase (whether a
+	// fresh call or a retry) must reuse the already-committed event instead of
+	// allocating a new one, so the downstream sees a stable identifier.
+	eventID := s.Repository.Execute(sensorID)
+
 	var err error
 	for attempt := 0; attempt < 2; attempt++ {
-		eventID := s.Repository.Execute(sensorID)
-		s.Audit.RecordSuccess(eventID)
 		err = s.Client.Send(eventID)
 		if err == nil {
+			// Only record success after the event has actually been delivered.
+			s.Audit.RecordSuccess(eventID)
 			return nil
 		}
 	}
