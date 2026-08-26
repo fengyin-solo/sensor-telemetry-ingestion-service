@@ -27,13 +27,11 @@ func processOne(opener Opener, name string) (err error) {
 func Process(opener Opener, backend transaction.Backend, names []string) error {
 	var operationErr error
 	for _, name := range names {
-		resource, err := opener.Open(name)
-		if err != nil {
-			operationErr = err
-			break
-		}
-		defer resource.Close()
-		if err := resource.Read(); err != nil {
+		// processOne opens, reads, and closes each resource within its own
+		// scope, so the handle is released before the next item is opened.
+		// A loop-body defer would accumulate until this function returns and
+		// exhaust the handle quota before reaching later items.
+		if err := processOne(opener, name); err != nil {
 			operationErr = err
 			break
 		}
